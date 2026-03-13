@@ -34,3 +34,10 @@ A beautiful Material You download manager browser extension that replaces your n
 - Tailwind CSS
 - Material Symbols
 - JavaScript
+
+## License
+
+This project is licensed under the MIT License. See `LICENSE` for details.
+
+This project uses Tailwind CSS, which is also licensed under the MIT License:
+https://github.com/tailwindlabs/tailwindcss/blob/main/LICENSE
