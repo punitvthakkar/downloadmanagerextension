@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Downloads</title>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+  <link rel="stylesheet" href="tailwind.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--surface);
+      color: var(--on-surface);
+      min-height: 100vh;
+    }
+
+    .material-symbols-rounded {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      user-select: none;
+      line-height: 1;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--outline); }
+
+    /* Focus ring */
+    :focus-visible {
+      outline: 3px solid var(--primary) !important;
+      outline-offset: 2px;
+    }
+
+    /* State layer — simple background-color change, no compositing layers */
+    .state-layer { position: relative; overflow: hidden; }
+    .state-layer:hover  { background-color: color-mix(in srgb, var(--on-surface) 8%,  transparent); }
+    .state-layer:active { background-color: color-mix(in srgb, var(--on-surface) 12%, transparent); }
+
+    /* Selected download items */
+    .download-item.is-selected,
+    .download-card.is-selected {
+      outline: 2px solid var(--primary);
+      outline-offset: -2px;
+    }
+
+    /* Filter chips */
+    .filter-chip {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.8125rem; font-weight: 500;
+      white-space: nowrap; cursor: pointer;
+      border: 1.5px solid var(--outline-variant);
+      transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+    }
+    .filter-chip:not(.active) {
+      background: var(--surface-container-high);
+      color: var(--on-surface-variant);
+    }
+    .filter-chip:not(.active):hover {
+      background: var(--surface-container-highest);
+      color: var(--on-surface);
+      border-color: var(--outline);
+    }
+    .filter-chip.active {
+      background: var(--secondary-container);
+      color: var(--on-secondary-container);
+      border-color: transparent;
+    }
+    .chip-count {
+      font-size: 0.7rem; font-weight: 600; opacity: 0.65;
+    }
+
+    /* View button active state */
+    .view-btn.active { background-color: #E8DEF8; color: #1D192B; }
+
+    /* Hover states for list/card items */
+    .download-item:hover  { background-color: #ECE6F0; }
+    .download-card:hover  {
+      background-color: #ECE6F0;
+      box-shadow: 0px 1px 2px rgba(0,0,0,0.3), 0px 1px 3px 1px rgba(0,0,0,0.15);
+    }
+
+    /* Action buttons reveal on hover/focus/selected */
+    .download-item .actions,
+    .download-card .actions  { opacity: 0; transition: opacity 0.15s ease; }
+    .download-item:hover .actions,
+    .download-card:hover .actions,
+    .download-item:focus-within .actions,
+    .download-card:focus-within .actions,
+    .download-item.is-selected .actions,
+    .download-card.is-selected .actions { opacity: 1; }
+
+    /* Progress bar pulse */
+    @keyframes progress-pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.7; }
+    }
+    .progress-active { animation: progress-pulse 2s ease-in-out infinite; }
+
+    /* Snackbar */
+    #snackbar { transition: opacity 0.25s ease, transform 0.25s ease; }
+    #snackbar.show {
+      opacity: 1 !important;
+      transform: translateY(0) !important;
+      pointer-events: auto !important;
+    }
+
+    /* ── Download card components ── */
+    .download-card {
+      display: flex; flex-direction: column;
+      padding: 0.875rem; border-radius: 1.25rem;
+      background: var(--surface-container);
+      cursor: pointer;
+      transition: background-color 120ms ease;
+    }
+    .download-card:hover  { background: var(--surface-container-high); }
+    .download-card:hover .actions,
+    .download-card:focus-within .actions,
+    .download-card.is-selected .actions { opacity: 1; }
+
+    .download-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.45rem 0.75rem; border-radius: 0.875rem;
+      cursor: pointer;
+      transition: background-color 120ms ease;
+    }
+    .download-item:hover  { background: var(--surface-container); }
+    .download-item:hover .actions,
+    .download-item:focus-within .actions,
+    .download-item.is-selected .actions { opacity: 1; }
+
+    .card-icon {
+      width: 2.75rem; height: 2.75rem; border-radius: 0.875rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-bottom: 0.625rem;
+    }
+    .card-name {
+      margin: 0; font-size: 0.825rem; font-weight: 500;
+      color: var(--on-surface); line-height: 1.35;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .card-ext {
+      margin: 0.2rem 0 0; font-size: 0.65rem;
+      color: var(--on-surface-variant);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .card-meta {
+      margin: 0.25rem 0 0; font-size: 0.7rem;
+      color: var(--on-surface-variant);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .download-card .actions {
+      display: flex; justify-content: flex-end;
+      gap: 0.125rem; margin-top: auto; padding-top: 0.5rem;
+      opacity: 0; transition: opacity 120ms ease;
+    }
+    .download-item .actions {
+      display: flex; gap: 0.125rem; flex-shrink: 0;
+      opacity: 0; transition: opacity 120ms ease;
+    }
+
+    /* Action buttons */
+    .action-btn {
+      width: 2rem; height: 2rem; border-radius: 9999px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--on-surface-variant);
+      transition: background-color 120ms ease, color 120ms ease;
+      flex-shrink: 0;
+    }
+    .action-btn:hover       { background: var(--surface-container-highest); color: var(--on-surface); }
+    .action-btn.danger:hover { background: var(--error-container); color: var(--on-error-container); }
+
+    /* Status badges */
+    .badge {
+      font-size: 0.68rem; font-weight: 600;
+      padding: 0.1rem 0.45rem; border-radius: 9999px;
+      flex-shrink: 0; white-space: nowrap;
+    }
+    .badge-neutral { background: var(--surface-container-high); color: var(--on-surface-variant); }
+    .badge-primary { background: var(--primary-container);      color: var(--on-primary-container); }
+    .badge-error   { background: var(--error-container);        color: var(--on-error-container); }
+
+    /* Progress bar */
+    .prog-track {
+      height: 3px; border-radius: 9999px;
+      background: var(--surface-container-high);
+      overflow: hidden; margin-top: 0.5rem;
+    }
+    .prog-fill {
+      height: 100%; border-radius: 9999px;
+      background: var(--primary);
+    }
+
+    /* ── Shortcuts panel collapse animation ── */
+    /* Uses the CSS grid trick: grid-template-rows 0fr → 1fr */
+    #shortcuts-panel {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                  opacity 0.22s ease,
+                  margin-bottom 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 0;
+      margin-bottom: 0;
+    }
+    #shortcuts-panel.open {
+      grid-template-rows: 1fr;
+      opacity: 1;
+      margin-bottom: 1.5rem;
+    }
+    #shortcuts-panel > .panel-inner {
+      overflow: hidden;
+    }
+
+    /* Shortcut key pill */
+    .shortcut-key {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.75rem;
+      padding: 0.1rem 0.4rem;
+      background: var(--surface-container-lowest);
+      border: 1px solid var(--outline-variant);
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--on-surface);
+      white-space: nowrap;
+      box-shadow: 0 1px 0 var(--outline-variant);
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body class="bg-surface">
+
+  <div id="app" class="max-w-screen-2xl mx-auto px-6 py-8">
+
+    <!-- ── HEADER ───────────────────────────────────── -->
+    <header class="mb-6">
+
+      <!-- Title row -->
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 rounded-2xl bg-primary-container flex items-center justify-center shrink-0">
+            <span class="material-symbols-rounded text-on-primary-container text-xl">download</span>
+          </div>
+          <h1 class="text-2xl font-semibold text-on-surface truncate"
+              style="font-family:'Google Sans Display',sans-serif;">Downloads</h1>
+          <span id="download-count"
+            class="text-xs font-medium text-on-surface-variant bg-surface-container-high px-3 py-1 rounded-full shrink-0">
+            Loading…
+          </span>
+        </div>
+
+        <div class="flex items-center gap-1 shrink-0">
+          <button id="btn-grid-view"
+            class="view-btn w-10 h-10 rounded-full flex items-center justify-center state-layer transition-colors"
+            title="Grid view [G]" aria-label="Grid view">
+            <span class="material-symbols-rounded text-on-surface-variant">grid_view</span>
+          </button>
+          <button id="btn-list-view"
+            class="view-btn w-10 h-10 rounded-full flex items-center justify-center state-layer transition-colors"
+            title="List view [L]" aria-label="List view">
+            <span class="material-symbols-rounded text-on-surface-variant">view_agenda</span>
+          </button>
+          <button id="btn-compact-view"
+            class="view-btn w-10 h-10 rounded-full flex items-center justify-center state-layer transition-colors"
+            title="Compact view [C]" aria-label="Compact view">
+            <span class="material-symbols-rounded text-on-surface-variant">table_rows</span>
+          </button>
+
+          <div style="width:1px;height:1.5rem;background:var(--outline-variant);margin:0 0.25rem;"></div>
+
+          <button id="btn-shortcuts"
+            class="w-10 h-10 rounded-full flex items-center justify-center state-layer hover:bg-surface-container-high transition-colors"
+            title="Keyboard shortcuts [?]" aria-label="Keyboard shortcuts" aria-expanded="false">
+            <span class="material-symbols-rounded text-on-surface-variant">keyboard</span>
+          </button>
+          <button id="btn-refresh"
+            class="w-10 h-10 rounded-full flex items-center justify-center state-layer hover:bg-surface-container-high transition-colors"
+            title="Refresh [R]" aria-label="Refresh downloads">
+            <span class="material-symbols-rounded text-on-surface-variant">refresh</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search bar -->
+      <div class="relative group">
+        <span class="material-symbols-rounded absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none transition-colors group-focus-within:text-primary">
+          search
+        </span>
+        <input
+          id="search-input"
+          type="text"
+          placeholder="Search downloads by name, source, or type…"
+          autocomplete="off"
+          class="w-full pl-14 pr-12 py-4 bg-surface-container-high rounded-full text-on-surface text-base
+                 placeholder:text-on-surface-variant border-2 border-transparent
+                 focus:border-primary focus:bg-surface-container-lowest
+                 outline-none transition-all duration-200"
+          aria-label="Search downloads"
+        >
+        <button id="btn-clear-search"
+          class="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full items-center justify-center
+                 hover:bg-surface-container-highest state-layer transition-colors hidden"
+          aria-label="Clear search">
+          <span class="material-symbols-rounded text-on-surface-variant text-sm">close</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ── KEYBOARD SHORTCUTS PANEL ─────────────────── -->
+    <div id="shortcuts-panel" role="region" aria-label="Keyboard shortcuts">
+      <div class="panel-inner">
+        <div style="background:var(--surface-container);border-radius:1.25rem;padding:1.25rem 1.5rem;">
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <span style="font-size:0.8rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:var(--on-surface-variant);">
+              Keyboard shortcuts
+            </span>
+            <button id="btn-shortcuts-close"
+              style="width:1.75rem;height:1.75rem;border-radius:9999px;display:flex;align-items:center;justify-content:center;color:var(--on-surface-variant);"
+              class="state-layer hover:bg-surface-container-high transition-colors"
+              aria-label="Close shortcuts">
+              <span class="material-symbols-rounded" style="font-size:18px;">close</span>
+            </button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:1.25rem 2rem;">
+
+            <!-- Navigation -->
+            <div>
+              <p style="font-size:0.7rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--primary);margin-bottom:0.6rem;">Navigation</p>
+              <div style="display:flex;flex-direction:column;gap:0.45rem;">
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">/</span><span>Focus search</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">↑</span><span class="shortcut-key">↓</span><span>Navigate files</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">j</span><span class="shortcut-key">k</span><span>Navigate (vim)</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">Esc</span><span>Deselect / clear search</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div>
+              <p style="font-size:0.7rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--primary);margin-bottom:0.6rem;">Actions</p>
+              <div style="display:flex;flex-direction:column;gap:0.45rem;">
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">Enter</span><span>Open file</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">F</span><span>Show in folder</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">Del</span><span>Remove from list</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">R</span><span>Refresh</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Views -->
+            <div>
+              <p style="font-size:0.7rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--primary);margin-bottom:0.6rem;">Views</p>
+              <div style="display:flex;flex-direction:column;gap:0.45rem;">
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">G</span><span>Grid view</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">L</span><span>List view</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">C</span><span>Compact view</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">?</span><span>Toggle this panel</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Filters -->
+            <div>
+              <p style="font-size:0.7rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--primary);margin-bottom:0.6rem;">Filters</p>
+              <div style="display:flex;flex-direction:column;gap:0.45rem;">
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">1</span><span>All files</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">2</span><span>Images</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">3</span><span>Videos</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--on-surface-variant);">
+                  <span class="shortcut-key">4 – 9</span><span>Audio, Docs, Archives…</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── FILTER & SORT BAR ──────────────────────── -->
+    <!-- Single wrapping row — chips, hide-missing, and sort are all peers -->
+    <div class="mb-6" style="display:flex;flex-wrap:wrap;align-items:center;gap:0.375rem;">
+
+      <!-- Filter chips injected by JS; display:contents makes them direct flex children -->
+      <div id="filter-chips" style="display:contents;" role="tablist" aria-label="Filter by type"></div>
+
+      <!-- Divider -->
+      <div style="width:1px;height:1.375rem;background:var(--outline-variant);margin:0 0.25rem;flex-shrink:0;"></div>
+
+      <!-- Hide missing — same chip style -->
+      <button id="btn-hide-missing"
+        class="filter-chip"
+        title="Hide missing files"
+        aria-pressed="false">
+        <span class="material-symbols-rounded" style="font-size:15px;">hide_source</span>
+        Hide missing
+      </button>
+
+      <!-- Sort — chip-shaped select -->
+      <div style="position:relative;display:inline-flex;align-items:center;flex-shrink:0;">
+        <span class="material-symbols-rounded"
+          style="position:absolute;left:0.6rem;font-size:15px;color:var(--on-surface-variant);pointer-events:none;">
+          sort
+        </span>
+        <select id="sort-select"
+          style="-webkit-appearance:none;appearance:none;
+                 padding:0.35rem 1.75rem 0.35rem 1.875rem;
+                 border-radius:9999px;
+                 font-size:0.8125rem;font-weight:500;
+                 background:var(--surface-container-high);
+                 color:var(--on-surface-variant);
+                 border:1.5px solid var(--outline-variant);
+                 cursor:pointer;outline:none;
+                 transition:background-color 120ms ease,border-color 120ms ease;">
+          <option value="date-desc">Newest first</option>
+          <option value="date-asc">Oldest first</option>
+          <option value="name-asc">Name A → Z</option>
+          <option value="name-desc">Name Z → A</option>
+          <option value="size-desc">Largest first</option>
+          <option value="size-asc">Smallest first</option>
+          <option value="source-asc">Source A → Z</option>
+        </select>
+        <span class="material-symbols-rounded"
+          style="position:absolute;right:0.4rem;font-size:15px;color:var(--on-surface-variant);pointer-events:none;">
+          expand_more
+        </span>
+      </div>
+
+    </div>
+
+    <!-- ── LOADING STATE ──────────────────────────── -->
+    <div id="state-loading" class="flex flex-col items-center justify-center py-32 gap-5">
+      <div class="w-12 h-12 rounded-full border-4 border-primary-container border-t-primary animate-spin"></div>
+      <p class="text-on-surface-variant text-sm">Loading your downloads…</p>
+    </div>
+
+    <!-- ── DOWNLOADS AREA ─────────────────────────── -->
+    <main id="downloads-area" aria-label="Downloads" class="min-h-64"></main>
+
+    <!-- ── EMPTY STATE ────────────────────────────── -->
+    <div id="state-empty" class="hidden flex-col items-center justify-center py-32 gap-4 text-center">
+      <div class="w-20 h-20 rounded-full bg-surface-container-high flex items-center justify-center">
+        <span class="material-symbols-rounded text-outline" style="font-size:40px;">download_done</span>
+      </div>
+      <div>
+        <h2 class="text-xl font-semibold text-on-surface mb-1">No downloads found</h2>
+        <p id="empty-subtitle" class="text-on-surface-variant text-sm max-w-xs">
+          Your downloads will appear here
+        </p>
+      </div>
+    </div>
+
+  </div><!-- /app -->
+
+  <!-- ── SNACKBAR ──────────────────────────────────── -->
+  <div id="snackbar"
+    class="fixed bottom-6 left-1/2 -translate-x-1/2 translate-y-2
+           bg-on-surface text-surface
+           px-5 py-3 rounded-full shadow-elev-3 text-sm font-medium
+           opacity-0 pointer-events-none z-50 select-none whitespace-nowrap"
+    role="status" aria-live="polite">
+  </div>
+
+  <script src="newtab.js"></script>
+</body>
+</html>

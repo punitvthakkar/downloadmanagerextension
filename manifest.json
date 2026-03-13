@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Download Manager",
+  "version": "1.0.0",
+  "description": "A beautiful Material You download manager",
+  "permissions": ["downloads", "downloads.open", "storage"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Open Download Manager",
+    "default_icon": {
+      "48": "icon.png",
+      "128": "icon.png"
+    }
+  },
+  "icons": {
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; object-src 'none'"
+  }
+}
